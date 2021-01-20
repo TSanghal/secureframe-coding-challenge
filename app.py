@@ -59,7 +59,6 @@ def dash():
 						"archived",
 						"created_at"]]
 	projects.rename(columns= {"name": "Name", 
-							 "team_id": "Team",
 							 "stats.num_stories": "Stories",
 							 "follower_ids": "Followers",
 							 "archived": "Active",
@@ -71,6 +70,17 @@ def dash():
 	projects["Active"] = ~projects["Active"]
 	# Update "Active" column to display symbols instead of True/False
 	projects["Active"] = ["&#9989"  if is_active else "&#10060" for is_active in projects["Active"]]
+	
+	# Create teams table and join it with projects table to get team names
+	teams_json = clubhouse.get("teams", json=True)
+	teams = pd.json_normalize(teams_json)
+	teams = teams[["id", "name"]]
+	teams.rename(columns={"id": "team_id", "name": "Team Name"}, inplace=True)
+	projects = projects.merge(teams, how="inner", on="team_id")
+
+	# Remove team ids from the projects table, rearrange columns, and convert to html
+	projects = projects.drop("team_id", axis=1)
+	projects = projects[["Name", "Team Name", "Stories", "Followers", "Active", "Created At"]]
 	projects_html = """<h1>Projects</h1>""" + projects.to_html(index=False, escape=False)
 
 	# Combine and return html for members and projects tables
